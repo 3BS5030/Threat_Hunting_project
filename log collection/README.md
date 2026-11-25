@@ -1,8 +1,8 @@
-Log Collection & Detection Engine
+# pytest cache directory #
 
--Collect authentication, system and audit logs.
--Collect cron and package logs.
--Collect Bash history.
--Implement regex rule engine.
--Load and compile rules from rules.json.
--Implement thresholds and time windows.
+This directory contains data from the pytest's cache plugin,
+which provides the `--lf` and `--ff` options, as well as the `cache` fixture.
+
+**Do not** commit this to version control.
+
+See [the docs](https://docs.pytest.org/en/stable/how-to/cache.html) for more information.

