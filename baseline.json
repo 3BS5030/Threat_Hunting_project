@@ -1,0 +1,28 @@
+{
+  "processes": [
+    "explorer.exe",
+    "svchost.exe",
+    "lsass.exe",
+    "csrss.exe",
+    "wininit.exe",
+    "services.exe",
+    "smss.exe",
+    "winlogon.exe",
+    "System",
+    "Registry"
+  ],
+  "services": [
+    "EventLog",
+    "WinDefend",
+    "RpcSs",
+    "LanmanServer",
+    "LanmanWorkstation"
+  ],
+  "users": [
+    "Administrator",
+    "hunter"
+  ],
+  "scheduled_tasks": [],
+  "startup_commands": [],
+  "listening_ports": [22, 135, 139, 445]
+}

@@ -1,0 +1,52 @@
+{
+  "tactics": [
+    "Reconnaissance",
+    "Resource Development",
+    "Initial Access",
+    "Execution",
+    "Persistence",
+    "Privilege Escalation",
+    "Defense Evasion",
+    "Credential Access",
+    "Discovery",
+    "Lateral Movement",
+    "Collection",
+    "Command and Control",
+    "Exfiltration",
+    "Impact"
+  ],
+  "techniques": {
+    "T1003.001": {
+      "name": "OS Credential Dumping: LSASS Memory",
+      "tactic": "Credential Access"
+    },
+    "T1053.005": {
+      "name": "Scheduled Task/Job: Scheduled Task",
+      "tactic": "Persistence"
+    },
+    "T1059.001": {
+      "name": "Command and Scripting Interpreter: PowerShell",
+      "tactic": "Execution"
+    },
+    "T1071.001": {
+      "name": "Application Layer Protocol: Web Protocols",
+      "tactic": "Command and Control"
+    },
+    "T1136.001": {
+      "name": "Create Account: Local Account",
+      "tactic": "Persistence"
+    },
+    "T1543.003": {
+      "name": "Create or Modify System Process: Windows Service",
+      "tactic": "Persistence"
+    },
+    "T1547.001": {
+      "name": "Boot or Logon Autostart Execution: Registry Run Keys",
+      "tactic": "Persistence"
+    },
+    "T1562.001": {
+      "name": "Impair Defenses: Disable or Modify Tools",
+      "tactic": "Defense Evasion"
+    }
+  }
+}

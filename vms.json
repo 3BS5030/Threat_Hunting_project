@@ -1,0 +1,31 @@
+{
+  "vms": [
+    {
+      "name": "win-client-01",
+      "host": "192.168.56.10",
+      "port": 22,
+      "username": "hunter",
+      "password": "hunter",
+      "os": "windows",
+      "enabled": true
+    },
+    {
+      "name": "win-server-01",
+      "host": "192.168.56.11",
+      "port": 22,
+      "username": "hunter",
+      "password": "hunter",
+      "os": "windows",
+      "enabled": true
+    },
+    {
+      "name": "linux-lab-01",
+      "host": "192.168.56.12",
+      "port": 22,
+      "username": "hunter",
+      "password": "hunter",
+      "os": "linux",
+      "enabled": false
+    }
+  ]
+}
