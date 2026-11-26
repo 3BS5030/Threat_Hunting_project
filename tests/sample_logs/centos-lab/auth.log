@@ -1,0 +1,13 @@
+Nov 25 03:41:00 centos-web01 sshd[2211]: Failed password for root from 203.0.113.42 port 40211 ssh2
+Nov 25 03:42:00 centos-web01 sshd[2212]: Failed password for root from 203.0.113.42 port 40212 ssh2
+Nov 25 03:43:00 centos-web01 sshd[2213]: Failed password for invalid user admin from 203.0.113.42 port 40213 ssh2
+Nov 25 03:44:00 centos-web01 sshd[2214]: Failed password for root from 203.0.113.42 port 40214 ssh2
+Nov 25 03:45:00 centos-web01 sshd[2215]: Failed password for root from 203.0.113.42 port 40215 ssh2
+Nov 25 03:46:00 centos-web01 sshd[2216]: Failed password for root from 203.0.113.42 port 40216 ssh2
+Nov 25 03:47:00 centos-web01 sshd[2240]: Accepted password for analyst from 203.0.113.42 port 54321 ssh2
+Nov 25 03:45:30 centos-web01 sudo: analyst : TTY=pts/0 ; PWD=/home/analyst ; USER=root ; COMMAND=/bin/id
+Nov 25 03:45:35 centos-web01 sudo[1422]: baduser : user NOT in sudoers ; TTY=pts/0 ; PWD=/tmp ; USER=root ; COMMAND=/bin/bash
+Nov 25 03:46:00 centos-web01 sudo: pam_unix(sudo:auth): authentication failure; logname=analyst uid=1000 euid=0 tty=/dev/pts/0 ruser=analyst rhost= user=analyst
+Nov 25 03:50:00 centos-web01 useradd[2310]: new user: name=backdoor, UID=1337, GID=1337, home=/home/backdoor, shell=/bin/bash
+Nov 25 03:50:05 centos-web01 groupadd: new group: name=backdoor, GID=1337
+Nov 25 03:50:10 centos-web01 usermod[2312]: add 'backdoor' to group 'wheel'

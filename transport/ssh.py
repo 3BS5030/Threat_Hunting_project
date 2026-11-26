@@ -37,11 +37,34 @@ class SSHTransport:
         self.connection.open()
         return self
 
-    def run(self, command: str, timeout: int = 60) -> str:
+    def run_result(self, command: str, timeout: int = 60) -> dict[str, Any]:
         if self.connection is None:
             self.connect()
-        result = self.connection.run(command, hide=True, warn=True, timeout=timeout)
-        return result.stdout or ""
+        try:
+            result = self.connection.run(command, hide=True, warn=True, timeout=timeout)
+            code = getattr(result, "return_code", None)
+            failed = getattr(result, "failed", None)
+            if failed is None:
+                failed = code not in (None, 0)
+            return {
+                "ok": not bool(failed),
+                "stdout": str(getattr(result, "stdout", "") or ""),
+                "stderr": str(getattr(result, "stderr", "") or ""),
+                "exit_code": code,
+                "error": None,
+            }
+        except Exception as exc:
+            message = f"{type(exc).__name__}: {exc}"
+            return {
+                "ok": False,
+                "stdout": "",
+                "stderr": message,
+                "exit_code": None,
+                "error": message,
+            }
+
+    def run(self, command: str, timeout: int = 60) -> str:
+        return str(self.run_result(command, timeout=timeout)["stdout"])
 
     def fetch(self, remote_path: str, local_path: str) -> Any:
         if self.connection is None:

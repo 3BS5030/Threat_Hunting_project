@@ -1,28 +1,334 @@
 {
+  "descriptions": {
+    "processes": "Expected trusted process basenames for the selected operating system.",
+    "services": "Expected enabled service units for the selected operating system.",
+    "scheduled_tasks": "Expected scheduled-task artifacts for the selected operating system.",
+    "startup_commands": "Site-approved startup links or commands; configure before production use.",
+    "users": "Flattened allowed account view; site-approved human and service accounts must be added explicitly.",
+    "listening_ports": "Expected listening TCP ports; adjust to site policy.",
+    "secure_log": "Reserved authentication-log policy section; collection source is selected from the detected Linux distribution.",
+    "syslog": "Reserved system-log policy section; collected from the detected Linux distribution.",
+    "audit": "Reserved audit-log policy section; collected from the detected Linux distribution.",
+    "cron": "Reserved cron-log policy section; collected from the detected Linux distribution.",
+    "package": "Reserved package-log policy section; collected from the detected Linux distribution.",
+    "history": "Reserved shell-history policy section; collected from the remote user home directory.",
+    "web_access": "Reserved web access-log policy section; collected when a web server is present.",
+    "web_error": "Reserved web error-log policy section; collected when a web server is present.",
+    "trusted_administrators": "Approved human administrator accounts; empty until configured by an operator.",
+    "trusted_service_accounts": "Approved non-login service accounts; empty until configured by an operator.",
+    "allowed_internal_ip_ranges": "Internal CIDRs used to classify authentication sources as internal.",
+    "approved_packages": "Packages permitted by host policy.",
+    "expected_cron_jobs": "Approved cron artifacts for Linux hosts.",
+    "known_system_accounts": "Operating-system provided accounts shipped with the host.",
+    "trusted_executable_paths": "Absolute paths of approved binaries; adjust Python path for CentOS 7 if needed."
+  },
   "processes": [
-    "explorer.exe",
-    "svchost.exe",
-    "lsass.exe",
-    "csrss.exe",
-    "wininit.exe",
-    "services.exe",
-    "smss.exe",
-    "winlogon.exe",
-    "System",
-    "Registry"
+    "systemd",
+    "sshd",
+    "crond",
+    "rsyslogd",
+    "chronyd",
+    "dbus-daemon",
+    "dbus-broker",
+    "firewalld",
+    "NetworkManager",
+    "sudo",
+    "bash"
   ],
   "services": [
-    "EventLog",
-    "WinDefend",
-    "RpcSs",
-    "LanmanServer",
-    "LanmanWorkstation"
+    "sshd.service",
+    "crond.service",
+    "rsyslog.service",
+    "chronyd.service",
+    "firewalld.service",
+    "NetworkManager.service",
+    "systemd-journald.service",
+    "dbus.service",
+    "dbus-broker.service",
+    "polkitd.service",
+    "sssd.service"
+  ],
+  "scheduled_tasks": [
+    "/etc/cron.daily/logrotate",
+    "/etc/cron.weekly/man-db"
+  ],
+  "startup_commands": [
+    "/etc/rc.d/rc.local"
   ],
   "users": [
-    "Administrator",
-    "hunter"
+    "root",
+    "bin",
+    "daemon",
+    "adm",
+    "lp",
+    "sync",
+    "shutdown",
+    "halt",
+    "mail",
+    "operator",
+    "games",
+    "ftp",
+    "nobody",
+    "systemd-network",
+    "dbus",
+    "polkitd",
+    "sshd",
+    "chrony",
+    "sssd"
   ],
-  "scheduled_tasks": [],
-  "startup_commands": [],
-  "listening_ports": [22, 135, 139, 445]
+  "listening_ports": [
+    22,
+    80,
+    443,
+    9090
+  ],
+  "secure_log": [],
+  "syslog": [],
+  "audit": [],
+  "cron": [],
+  "package": [],
+  "history": [],
+  "web_access": [],
+  "web_error": [],
+  "trusted_administrators": [],
+  "trusted_service_accounts": [],
+  "allowed_internal_ip_ranges": [
+    "10.0.0.0/8",
+    "172.16.0.0/12",
+    "192.168.0.0/16"
+  ],
+  "approved_packages": [
+    "bash",
+    "coreutils",
+    "openssh-server",
+    "sudo",
+    "chrony",
+    "cronie",
+    "rsyslog",
+    "firewalld",
+    "NetworkManager",
+    "policycoreutils",
+    "ca-certificates",
+    "openssl",
+    "vim-enhanced"
+  ],
+  "expected_cron_jobs": [
+    "/etc/cron.daily/logrotate",
+    "/etc/cron.weekly/man-db"
+  ],
+  "known_system_accounts": [
+    "root",
+    "bin",
+    "daemon",
+    "adm",
+    "lp",
+    "sync",
+    "shutdown",
+    "halt",
+    "mail",
+    "operator",
+    "games",
+    "ftp",
+    "nobody",
+    "systemd-network",
+    "dbus",
+    "polkitd",
+    "sshd",
+    "chrony",
+    "sssd"
+  ],
+  "trusted_executable_paths": [
+    "/usr/bin/bash",
+    "/bin/bash",
+    "/usr/bin/sudo",
+    "/usr/bin/ssh",
+    "/usr/sbin/sshd",
+    "/usr/bin/crontab",
+    "/usr/sbin/crond",
+    "/usr/sbin/rsyslogd",
+    "/usr/sbin/chronyd",
+    "/usr/bin/systemctl",
+    "/usr/bin/python3",
+    "/usr/sbin/firewalld"
+  ],
+  "profiles": {
+    "windows": {
+      "processes": [
+        "svchost.exe",
+        "explorer.exe",
+        "wininit.exe",
+        "services.exe",
+        "lsass.exe",
+        "smss.exe",
+        "csrss.exe",
+        "winlogon.exe",
+        "powershell.exe"
+      ],
+      "services": [
+        "WinDefend",
+        "EventLog",
+        "RpcSs",
+        "DPS"
+      ],
+      "scheduled_tasks": [],
+      "startup_commands": [],
+      "users": [
+        "SYSTEM",
+        "LOCAL SERVICE",
+        "NETWORK SERVICE"
+      ],
+      "listening_ports": [
+        22,
+        80,
+        443,
+        445,
+        3389
+      ],
+      "secure_log": [],
+      "trusted_administrators": [],
+      "trusted_service_accounts": [],
+      "allowed_internal_ip_ranges": [
+        "10.0.0.0/8",
+        "172.16.0.0/12",
+        "192.168.0.0/16"
+      ],
+      "approved_packages": [],
+      "expected_cron_jobs": [],
+      "known_system_accounts": [
+        "SYSTEM",
+        "LOCAL SERVICE",
+        "NETWORK SERVICE"
+      ],
+      "trusted_executable_paths": [
+        "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+        "C:\\Windows\\System32\\svchost.exe",
+        "C:\\Windows\\System32\\services.exe",
+        "C:\\Windows\\System32\\lsass.exe"
+      ]
+    },
+    "linux": {
+      "processes": [
+        "systemd",
+        "sshd",
+        "crond",
+        "rsyslogd",
+        "chronyd",
+        "dbus-daemon",
+        "dbus-broker",
+        "firewalld",
+        "NetworkManager",
+        "sudo",
+        "bash"
+      ],
+      "services": [
+        "sshd.service",
+        "crond.service",
+        "rsyslog.service",
+        "chronyd.service",
+        "firewalld.service",
+        "NetworkManager.service",
+        "systemd-journald.service",
+        "dbus.service",
+        "dbus-broker.service",
+        "polkitd.service",
+        "sssd.service"
+      ],
+      "scheduled_tasks": [
+        "/etc/cron.daily/logrotate",
+        "/etc/cron.weekly/man-db"
+      ],
+      "startup_commands": [
+        "/etc/rc.d/rc.local"
+      ],
+      "users": [
+        "root",
+        "bin",
+        "daemon",
+        "adm",
+        "lp",
+        "sync",
+        "shutdown",
+        "halt",
+        "mail",
+        "operator",
+        "games",
+        "ftp",
+        "nobody",
+        "systemd-network",
+        "dbus",
+        "polkitd",
+        "sshd",
+        "chrony",
+        "sssd"
+      ],
+      "listening_ports": [
+        22,
+        80,
+        443,
+        9090
+      ],
+      "secure_log": [],
+      "trusted_administrators": [],
+      "trusted_service_accounts": [],
+      "allowed_internal_ip_ranges": [
+        "10.0.0.0/8",
+        "172.16.0.0/12",
+        "192.168.0.0/16"
+      ],
+      "approved_packages": [
+        "bash",
+        "coreutils",
+        "openssh-server",
+        "sudo",
+        "chrony",
+        "cronie",
+        "rsyslog",
+        "firewalld",
+        "NetworkManager",
+        "policycoreutils",
+        "ca-certificates",
+        "openssl",
+        "vim-enhanced"
+      ],
+      "expected_cron_jobs": [
+        "/etc/cron.daily/logrotate",
+        "/etc/cron.weekly/man-db"
+      ],
+      "known_system_accounts": [
+        "root",
+        "bin",
+        "daemon",
+        "adm",
+        "lp",
+        "sync",
+        "shutdown",
+        "halt",
+        "mail",
+        "operator",
+        "games",
+        "ftp",
+        "nobody",
+        "systemd-network",
+        "dbus",
+        "polkitd",
+        "sshd",
+        "chrony",
+        "sssd"
+      ],
+      "trusted_executable_paths": [
+        "/usr/bin/bash",
+        "/bin/bash",
+        "/usr/bin/sudo",
+        "/usr/bin/ssh",
+        "/usr/sbin/sshd",
+        "/usr/bin/crontab",
+        "/usr/sbin/crond",
+        "/usr/sbin/rsyslogd",
+        "/usr/sbin/chronyd",
+        "/usr/bin/systemctl",
+        "/usr/bin/python3",
+        "/usr/sbin/firewalld"
+      ]
+    }
+  }
 }

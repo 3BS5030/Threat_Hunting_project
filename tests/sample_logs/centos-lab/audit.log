@@ -1,0 +1,2 @@
+type=SYSCALL msg=audit(1700000000.123:456): arch=c000003e syscall=59 success=yes exit=0 a0=7ffcd3 a1=7ffcd8 comm="sudo" exe="/usr/bin/sudo"
+type=USER_AUTH msg=audit(1700000020.123:460): pid=2200 uid=0 auid=1000 ses=1 msg='op=PAM:authentication acct="root" exe="/usr/bin/su" hostname=? addr=? terminal=pts/0 res=failed'

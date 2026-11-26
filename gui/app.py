@@ -13,7 +13,7 @@ from typing import Any, Callable
 from gui.ai_panel import AiPanel
 from gui.report_panel import ReportPanel
 from gui.vm_card import VmCard, make_vm_card
-from hunting.engine import hunt_vm
+from hunting.engine import hunt_vm, refresh_attack_data
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
 
@@ -40,6 +40,9 @@ class App:
 
         self._build_ui()
         self.poll_queue()
+        threading.Thread(
+            target=self._run_mitre_refresh, args=(False,), daemon=True
+        ).start()
 
     def _build_ui(self) -> None:
         main = ttk.Frame(self.root, padding=10)
@@ -80,6 +83,11 @@ class App:
         self.status = ttk.Label(self.root, text="Ready", anchor=tk.W, padding=(10, 4))
         self.status.pack(fill=tk.X)
 
+        self.refresh_button = ttk.Button(
+            self.root, text="Refresh ATT&CK", command=self.start_mitre_refresh
+        )
+        self.refresh_button.pack(fill=tk.X, padx=10, pady=(0, 8))
+
     def start_hunt(self, vm: dict[str, Any]) -> None:
         name = vm.get("name", "unnamed")
         card = self.cards.get(name)
@@ -90,6 +98,26 @@ class App:
         threading.Thread(
             target=self._run_hunt, args=(vm,), daemon=True
         ).start()
+
+    def start_mitre_refresh(self) -> None:
+        self.refresh_button.config(state=tk.DISABLED)
+        self.status.config(text="Refreshing ATT&CK...")
+        threading.Thread(
+            target=self._run_mitre_refresh, args=(True,), daemon=True
+        ).start()
+
+    def _run_mitre_refresh(self, force: bool = False) -> None:
+        try:
+            dataset = refresh_attack_data(force=force)
+            self.events.put({"type": "mitre", "dataset": dataset})
+        except Exception as exc:
+            self.events.put(
+                {
+                    "type": "error",
+                    "vm": "MITRE",
+                    "message": f"{type(exc).__name__}: {exc}",
+                }
+            )
 
     def _run_hunt(self, vm: dict[str, Any]) -> None:
         try:
@@ -125,9 +153,25 @@ class App:
                         text=f"{len(report.get('findings', []))} finding(s)"
                     )
                 self.status.config(text=f"Finished {name}")
+            elif event["type"] == "mitre":
+                dataset = event.get("dataset", {})
+                notifications = dataset.get("notifications", []) or []
+                version = dataset.get("source_version") or dataset.get("dataset_version") or dataset.get("status", "")
+                message = f"ATT&CK {version or 'updated'}: {len(notifications)} change(s)"
+                if notifications:
+                    labels = [
+                        f"{item.get('technique_id', '')} {item.get('change_type', '')}".strip()
+                        for item in notifications[:3]
+                    ]
+                    message += " (" + ", ".join(labels) + ")"
+                self.status.config(text=message)
+                self.refresh_button.config(state=tk.NORMAL)
+                continue
             elif event["type"] == "error":
                 if card is not None:
                     card["status_label"].config(text="Failed")
+                if name == "MITRE":
+                    self.refresh_button.config(state=tk.NORMAL)
                 self.status.config(text=f"{name}: {event['message']}")
                 self.report_panel.show_error(name, event["message"])
             if card is not None:

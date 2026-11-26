@@ -1,0 +1,2 @@
+Nov 25 09:00:00 clean-host systemd: Started OpenSSH server daemon.
+Nov 25 09:00:01 clean-host sshd[100]: Connection closed by 192.168.56.10 port 54321 [preauth]

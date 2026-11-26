@@ -1,0 +1,4 @@
+ls -la /tmp
+cat /etc/hosts
+python script.py
+echo hello | base64

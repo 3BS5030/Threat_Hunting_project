@@ -1,0 +1,2 @@
+type=USER_AUTH msg=audit(1700000030.789:462): pid=2210 uid=0 auid=1000 ses=1 msg='op=PAM:authentication acct="analyst" exe="/usr/sbin/sshd" hostname=192.168.56.1 addr=192.168.56.1 terminal=ssh res=success'
+type=SYSCALL msg=audit(1700000035.123:463): arch=c000003e syscall=59 success=yes exit=0 comm="id" exe="/usr/bin/id"
